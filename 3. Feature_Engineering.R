@@ -298,7 +298,7 @@ for (i in 1:length(team_matches_4)){
 }
 
 # check the result
-#glimpse(team_matches_4[[183]])
+glimpse(team_matches_4[[18]])
 #barplot(team_matches_4[[183]]$V21, main = "5 game streak plus minus example")
 
 # give names to all the variables
@@ -430,7 +430,7 @@ team_matches_14 <- lapply(team_matches_13, function(df) {df$matchcounter <- 1:nr
 team_matches_14 <- lapply(team_matches_14, function(df) {df$cumSumPlusMinus <- cumsum(df$target_goal_difference); df})
 team_matches_14 <- lapply(team_matches_14, function(df) {df$offset_cumsum_plusminus <- offset_column(df, "cumSumPlusMinus", 1); df})
 team_matches_14 <- lapply(team_matches_14, function(df) {df <- drop_column(df, "cumSumPlusMinus"); df})
-team_matches_14 <- lapply(team_matches_14, function(df) {df <- drop_column(df, "matchcounter"); df})
+
 
 # check result
 #glimpse(team_matches_14[[3]])
@@ -611,7 +611,9 @@ MainDataFrameFinal$target_homeAway.y <- revalue(MainDataFrameFinal$target_homeAw
 # drop coordinate columns
 #names(MainDataFrameFinal)
 MainDataFrameFinal2 <- MainDataFrameFinal %>%
-  select(-c(8, 12:13, 15, 28:31, 35:45, 47, 60:63))
+  select(-c(8, 12:13, 15, 28:31, 36:46, 48, 61:64, 66))
+
+names(MainDataFrameFinal)
 
 # make sure games only recorded once using target outcome correct
 
