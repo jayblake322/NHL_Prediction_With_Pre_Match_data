@@ -562,6 +562,8 @@ teamRanksGathered <- teamRanks3 %>%
   select(-"home") %>%
   gather(targetTeam, rank, -date)
 
+write.csv(teamRanksGathered, "team_ranks_table.csv")
+
 #table(teamRanksGathered$targetTeam)
 
 # check results  

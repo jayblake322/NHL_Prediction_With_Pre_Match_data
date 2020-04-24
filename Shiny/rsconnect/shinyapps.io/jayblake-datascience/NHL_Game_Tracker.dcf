@@ -1,0 +1,12 @@
+name: NHL_Game_Tracker
+title: NHL_Game_Tracker
+username:
+account: jayblake-datascience
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2181374
+bundleId: 3061506
+url: https://jayblake-datascience.shinyapps.io/NHL_Game_Tracker/
+when: 1587762393.46392
+asMultiple: FALSE
+asStatic: FALSE
