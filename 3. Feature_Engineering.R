@@ -118,7 +118,7 @@ wb <- loadWorkbook("Existing_nhl_scores.xlsx")
 matches <- readWorksheet(wb, sheet = 'matches', header = TRUE)
 stadiums <- readWorksheet(wb, sheet = "stadiums", header = TRUE)
 
-#glimpse(matches)
+glimpse(matches)
 #glimpse(stadiums)
 
 matches_2 <- matches %>%
@@ -476,6 +476,7 @@ for (z in 1:length(season_matches)){
   seasonMatrices[[z]] <- seasonx
 }  
 
+
 # check results
 #glimpse(seasonMatrices[[1]])
 
@@ -505,78 +506,125 @@ for (z in 1: length(seasonMatrices)){
 }
 
 # check result
-#glimpse(seasonMatrices[[5]])
+glimpse(seasonMatrices[[4]])
 
 # create a new dataframe of the cummulative result of seasonMatches
 seasonMatricesCumSum <- list()
 
-for (z in 1:length(seasonMatrices)){
+for (z in 1:3){
 
   seasonDates <- seasonMatrices[[z]]$date 
-  seasonCumSum <- as.data.frame(apply(seasonMatrices[[z]][, 2:32], 2, cumsum))
+  seasonCumSum <- as.data.frame(apply(seasonMatrices[[z]][, 3:32], 2, cumsum))
   seasonCumSum$date <- seasonDates
   seasonMatricesCumSum[[z]] <- seasonCumSum
   
 }  
 
-#glimpse(seasonMatricesCumSum[[5]])
+glimpse(seasonMatricesCumSum[[3]])
+
+# repeat for seasons with 31 teams
+
+seasonMatricesCumSum2 <- list()
+
+for (z in 4:6){
+  
+  seasonDates <- seasonMatrices[[z]]$date 
+  seasonCumSum <- as.data.frame(apply(seasonMatrices[[z]][, 3:33], 2, cumsum))
+  seasonCumSum$date <- seasonDates
+  seasonMatricesCumSum2[[z]] <- seasonCumSum
+  
+}  
+
+# glimpse(seasonMatricesCumSum2[[6]])
+
+# add into seaonMatricesCumSum
+
+seasonMatricesCumSum[[4]] <- seasonMatricesCumSum2[[4]]
+seasonMatricesCumSum[[5]] <- seasonMatricesCumSum2[[5]]
+seasonMatricesCumSum[[6]] <- seasonMatricesCumSum2[[6]]
+
+glimpse(seasonMatricesCumSum[[3]])
+
+#write.csv(seasonMatricesCumSum[[6]], "6.csv")
 # create a new dataframe of ranks of each row so that each team is ranked on every date of the season
 
 seasonDateRank <- list()
 
-for (z in 1:length(seasonMatricesCumSum)){
+for (z in 1:3){
   
-  xranks <- as.data.frame(t(apply(-seasonMatricesCumSum[[z]][, -32], 1, rank, ties.method = 'min')))
+  xranks <- as.data.frame(t(apply(-seasonMatricesCumSum[[z]][, -31], 1, rank, ties.method = 'min')))
   xranks$date <- seasonMatricesCumSum[[z]]$date
   seasonDateRank[[z]] <- xranks
 
 }
 
+# repeat for seasons with 31 teams
+
+for (z in 4:6){
+  
+  xranks <- as.data.frame(t(apply(-seasonMatricesCumSum[[z]][, -32], 1, rank, ties.method = 'min')))
+  xranks$date <- seasonMatricesCumSum[[z]]$date
+  seasonDateRank[[z]] <- xranks
+  
+}
+
 # check result
-#glimpse(seasonDateRank[[1]])
+glimpse(seasonMatricesCumSum[[5]])
+glimpse(seasonDateRank[[6]])
 
 # combine all into one
 
-teamRanks <- rbind(seasonDateRank[[1]], seasonDateRank[[2]], seasonDateRank[[3]])
+teamRanks <- rbind(seasonDateRank[[1]], seasonDateRank[[2]], seasonDateRank[[3]]) 
 teamRanks2 <- rbind(seasonDateRank[[4]], seasonDateRank[[5]], seasonDateRank[[6]])
 
-#glimpse(teamRanks)
+glimpse(seasonDateRank[[6]])
 
-teamRanks$`Vegas Golden Knights` <- NA                   
-teamRanks2$`Winnipeg Jets` <- NA
+glimpse(teamRanks)
+glimpse(teamRanks2)
 
 teamRanks <- teamRanks %>%
-  select(1:31,33:32)
+  mutate(`Vegas Golden Knights` = NA) %>%
+  select(31, 1:28, 32, 29:30)
+
+# glimpse(teamRanks)
 
 teamRanks2 <- teamRanks2 %>%
-  select(1:29,31, 33, 30, 32)
+  select(32, 1:31)
+
+# glimpse(teamRanks2)
 
 teamRanks3 <- rbind(teamRanks, teamRanks2)
 
+#glimpse(teamRanks3)
 
 # Join ranks to main dataframe -------------------------------------------------------------------------
 
 # gather team ranks dataframe
 
-teamRanksGathered <- teamRanks3 %>% 
-  select(-"home") %>%
+#write.csv(teamRanks3, "rank_adjust.csv")
+teamRanks3B <- readr::read_csv("rank_adjust.csv") %>% mutate(date = ymd(date))
+
+#glimpse(teamRanks3B)
+
+teamRanksGathered <- teamRanks3B %>% 
   gather(targetTeam, rank, -date)
 
-write.csv(teamRanksGathered, "team_ranks_table.csv")
+#glimpse(teamRanksGathered)
 
 #table(teamRanksGathered$targetTeam)
-
+#write.csv(teamRanksGathered, "team_ranks_table.csv")
 # check results  
-#glimpse(teamRanksGathered)
-#glimpse(teamRanks3)
+glimpse(teamRanksGathered)
 
 # left join rank onto the main dataframe
+#glimpse(matches_5)
+matches_5B <- matches_5 %>% mutate(date = as.Date(date))
 
-MainDataFrameALL <- matches_5 %>%
+MainDataFrameALL <- matches_5B %>%
   left_join(teamRanksGathered, by = c("date" = "date", "target_team" = "targetTeam"))
 
 # check result
-# glimpse(MainDataFrameALL)
+glimpse(MainDataFrameALL)
 
 # Rearrange Main Dataframe to have target and opponent relevant predictors with "Outcome Ready for Models --------
 
@@ -605,7 +653,7 @@ MainDataFrameFinal$seasonPlusMinusDifference <- MainDataFrameFinal$offset_cumsum
 MainDataFrameFinal$target_homeAway.x <- revalue(MainDataFrameFinal$target_homeAway.x, c("Home" = 1, "Away" = 0))
 MainDataFrameFinal$target_homeAway.y <- revalue(MainDataFrameFinal$target_homeAway.y, c("Home" = 1, "Away" = 0))
 
-# glimpse(MainDataFrameFinal)
+glimpse(MainDataFrameFinal)
 
 
 # Write to csv and final adjustments---------------------------------------------------------------------------
@@ -615,7 +663,7 @@ MainDataFrameFinal$target_homeAway.y <- revalue(MainDataFrameFinal$target_homeAw
 MainDataFrameFinal2 <- MainDataFrameFinal %>%
   select(-c(8, 12:13, 15, 28:31, 36:46, 48, 61:64, 66))
 
-names(MainDataFrameFinal)
+names(MainDataFrameFinal2)
 
 # make sure games only recorded once using target outcome correct
 
@@ -627,17 +675,18 @@ MainDataFrameFinal2 <- MainDataFrameFinal2 %>%
 #glimpse(MainDataFrameFinal2)
 # adjust rank - split dataframe then remerge
 
-rank_adjust <- split(MainDataFrameFinal2, list(MainDataFrameFinal2$target_team, MainDataFrameFinal2$season.x))
+#rank_adjust <- split(MainDataFrameFinal2, list(MainDataFrameFinal2$target_team, MainDataFrameFinal2$season.x))
 # Remove any empty data frames.... there are 3 due to teams changes i.e. vegas knights didn't exist in 2014/15 season
-rank_adjust <-  rank_adjust[sapply(rank_adjust, function(x) dim(x)[1]) > 0]
+#rank_adjust <-  rank_adjust[sapply(rank_adjust, function(x) dim(x)[1]) > 0]
 
-rank_adjust <- lapply(rank_adjust, function(df) {df$offset_rank.x <- offset_column(df, "rank.x", 1); df})
-rank_adjust <- lapply(rank_adjust, function(df) {df$offset_rank.y <- offset_column(df, "rank.y", 1); df})
-MainDataFrameFinal3 <- bind_rows(rank_adjust)
-MainDataFrameFinal3$rankDifference <- MainDataFrameFinal3$offset_rank.x - MainDataFrameFinal3$offset_rank.y
+#rank_adjust <- lapply(rank_adjust, function(df) {df$offset_rank.x <- offset_column(df, "rank.x", 1); df})
+#rank_adjust <- lapply(rank_adjust, function(df) {df$offset_rank.y <- offset_column(df, "rank.y", 1); df})
+#MainDataFrameFinal3 <- bind_rows(rank_adjust)
 
-MainDataFrameFinal3 <- drop_column(MainDataFrameFinal3, "rank.x")
-MainDataFrameFinal3 <- drop_column(MainDataFrameFinal3, "rank.y")
+MainDataFrameFinal2$rankDifference <- MainDataFrameFinal2$rank.x - MainDataFrameFinal2$rank.y
+
+MainDataFrameFinal2 <- drop_column(MainDataFrameFinal2, "rank.x")
+MainDataFrameFinal2 <- drop_column(MainDataFrameFinal2, "rank.y")
 
 #glimpse(MainDataFrameFinal3)
 

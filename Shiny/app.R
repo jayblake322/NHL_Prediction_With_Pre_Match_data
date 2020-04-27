@@ -1,45 +1,66 @@
+
+# libraries
 library(shiny)
-library(leaflet)
-library(lubridate)
-library(DT)
 library(shinydashboard)
+library(leaflet)
+library(DT)
+library(lubridate)
+library(dplyr)
 
-# set working directory
-setwd("C:/Users/jaybl/OneDrive/DS_Projects/NHL_Prediction_With_Pre_Match_data/shiny")
 
+# global variables
+date <- Sys.Date()
+
+# data
 matches <- read.csv("shiny_matches.csv") %>%
-  mutate(date = dmy(date))
+ mutate(date = dmy(date))
 
 ranks <- read.csv("team_ranks_table.csv") %>% 
-  mutate(Date = dmy(Date)) %>% arrange(Date, Rank)
+ mutate(Date = dmy(Date)) %>% arrange(Date, Rank)
 
-random_date <- as.Date("2020-02-20")
+season_date <- matches %>% select(c("date", "season")) %>%
+  distinct() %>% 
+  mutate(date = as.character(date)) %>% 
+  mutate(season = as.character(season))
 
-ui <- bootstrapPage(
+
+# Define UI for application that draws a histogram
+ui <- dashboardPage(
   
-  titlePanel("NHL Game Tracker"),
-  mainPanel(
-    h5("Upcoming games not played due to Covid-19"),
-    h2("")
-  ),
+  dashboardHeader(title = "NHL Game Tracker"),
+  dashboardSidebar(
+    
+    h3("Chosen Date"),
+    dateInput("Show Games and Rank Table", inputId = "Game_Searcher", date),
+    h3("Season"),
+    textOutput("season")
+    
+    ),
   
-  dateInput("Show Games and Rank Table for", inputId = "Game_Searcher", random_date),
+  dashboardBody(
+    h3('NHL Games for Chosen Date'),
+    leafletOutput("mymap", height = 350),
+    h3("Rank of Teams Prior to the Match"),
+    dataTableOutput("TeamRanks", height = 250)
   
-  mainPanel("Team Rank Before Today's Match", width = 100,
-            fluidRow(
-              splitLayout(cellWidths = c("50%", "50%"), dataTableOutput("TeamRanks"), leafletOutput("mymap")
-      )
-    )
   )
-)
   
+)
 
-
+# Define server logic required to draw a histogram
 server <- function(input, output) {
+
+  ## Reactive expression for the data subsetted to what the user selected
+  season <- reactive({
+    ifelse(month(input$Game_Searcher) > 6, 
+           paste(year(input$Game_Searcher), "/", year(input$Game_Searcher) + 1),
+           paste(year(input$Game_Searcher) - 1, "/", year(input$Game_Searcher)))
+  
+           })
   
   ## Reactive expression for the data subsetted to what the user selected
   filteredData_rank <- reactive({
-   ranks %>% filter(Date == input$Game_Searcher)
+    ranks %>% filter(Date == input$Game_Searcher) %>% select(-"Date")
   })
   
   ## Reactive expression for the data subsetted to what the user selected
@@ -47,10 +68,7 @@ server <- function(input, output) {
     matches %>% filter(date == input$Game_Searcher)
   })
   
-  
-  output$TeamRanks <- renderDataTable({
-    filteredData_rank()
-    })
+  output$season <- renderText({season()})
   
   output$mymap <- renderLeaflet({
     leaflet() %>% 
@@ -59,14 +77,25 @@ server <- function(input, output) {
       setMaxBounds(-128.569703, 25.187022, -64.497437, 55.092184)
   })
 
+  output$TeamRanks <- renderDataTable(
+    datatable(filteredData_rank(), rownames = FALSE,
+      options = list(
+          pageLength = 5,
+          pagingType = "simple",
+          autoWidth = TRUE)
+    )
+  )  
+  
   observe({
-   leafletProxy("mymap", data = filteredData_map()) %>%
-    clearShapes() %>%
-     addCircles(lng = ~location_lon, lat = ~location_lat, 
-                color = "red", radius = 100000, stroke = FALSE, fillOpacity = 0.5,
-                popup = ~label_content)
+    leafletProxy("mymap", data = filteredData_map()) %>%
+      clearShapes() %>%
+      addCircles(lng = ~location_lon, lat = ~location_lat, 
+                 color = "black", fillColor = "red", radius = 100000, stroke = TRUE, fillOpacity = 0.5,
+                 popup = ~label_content,
+                 popupOptions = popupOptions(maxWidth = 1000, closeOnClick = TRUE))
   })
 
 }
 
-shinyApp(ui, server)
+# Run the application 
+shinyApp(ui = ui, server = server)
