@@ -649,6 +649,8 @@ MainDataFrameFinal <- MainDataFrameALL %>%
 MainDataFrameFinal$seasonPointsDifference <- MainDataFrameFinal$offset_season_points.x - MainDataFrameFinal$offset_season_points.y
 MainDataFrameFinal$seasonPlusMinusDifference <- MainDataFrameFinal$offset_cumsum_plusminus.x - MainDataFrameFinal$offset_cumsum_plusminus.y
 
+# table(MainDataFrameFinal$target_homeAway.x)
+
 # recode home and away predictor
 MainDataFrameFinal$target_homeAway.x <- revalue(MainDataFrameFinal$target_homeAway.x, c("Home" = 1, "Away" = 0))
 MainDataFrameFinal$target_homeAway.y <- revalue(MainDataFrameFinal$target_homeAway.y, c("Home" = 1, "Away" = 0))
@@ -672,6 +674,8 @@ MainDataFrameFinal2 <- MainDataFrameFinal2 %>%
   filter(original_game == 1) %>%
   select(-45)
 
+#table(MainDataFrameFinal2$target_homeAway.x)
+
 #glimpse(MainDataFrameFinal2)
 # adjust rank - split dataframe then remerge
 
@@ -683,7 +687,9 @@ MainDataFrameFinal2 <- MainDataFrameFinal2 %>%
 #rank_adjust <- lapply(rank_adjust, function(df) {df$offset_rank.y <- offset_column(df, "rank.y", 1); df})
 #MainDataFrameFinal3 <- bind_rows(rank_adjust)
 
-MainDataFrameFinal2$rankDifference <- MainDataFrameFinal2$rank.x - MainDataFrameFinal2$rank.y
+MainDataFrameFinal2$rankDifference <- -(MainDataFrameFinal2$rank.x - MainDataFrameFinal2$rank.y)
+glimpse(MainDataFrameFinal2)
+
 
 MainDataFrameFinal2 <- drop_column(MainDataFrameFinal2, "rank.x")
 MainDataFrameFinal2 <- drop_column(MainDataFrameFinal2, "rank.y")
@@ -691,7 +697,7 @@ MainDataFrameFinal2 <- drop_column(MainDataFrameFinal2, "rank.y")
 #glimpse(MainDataFrameFinal3)
 
 # too big to write to excel workbook with XL connect
-write.csv(MainDataFrameFinal3, 'df_engineered.csv')
+write.csv(MainDataFrameFinal2, 'df_engineered.csv')
 
 
 

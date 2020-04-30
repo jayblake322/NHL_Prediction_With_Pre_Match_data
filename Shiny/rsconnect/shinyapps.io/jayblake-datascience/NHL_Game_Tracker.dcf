@@ -1,13 +1,13 @@
-name: NHL_Game_Tracker
-title: NHL_Game_Tracker
+name: NHL_Game_tracker
+title: NHL_Game_tracker
 username:
 account: jayblake-datascience
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
-appId: 2181733
-bundleId: 3073646
-url: https://jayblake-datascience.shinyapps.io/NHL_GAME_TRACKER/
-when: 1588017925.1693
+appId: 2197044
+bundleId: 3073759
+url: https://jayblake-datascience.shinyapps.io/NHL_Game_tracker/
+when: 1588019195.86515
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: .RData|join points to rank.R|season_points.csv
+ignoredFiles: join points to rank.R|season_points.csv

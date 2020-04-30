@@ -1,0 +1,222 @@
+---
+title: "A Quick Look at 4 Theories of Team Sports Victory (NHL)"
+author: "Jay Blake"
+date: "30/04/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+This quick report provides a brief look at the results of NHL matches over the last six seasons (2019/2020 not all games played) based on common theories of what affects the chance of a team winning or losing. Four theories are looked at with quick graphs and summaries of the insights for each.
+
+&nbsp;
+*This Rmarkdown script comprises one component of a more comprehensive project*
+&nbsp;
+&nbsp;
+
+[Project Page](https://jayblakedatascience.wixsite.com/mysite/sports-predictions-nhl)
+&nbsp;
+[GitHub Repository](https://github.com/jayblake322/NHL_Prediction_With_Pre_Match_data)
+
+```{r message=FALSE, warning=FALSE}
+# libraries
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(lubridate)
+library(XLConnect)
+library(scales)
+
+# Data 
+data <- read.csv("df_engineered.csv") %>% select(-1) %>% # drop index 
+  mutate(date = ymd(date))
+
+wb <- loadWorkbook("Existing_nhl_scores.xlsx")
+odds <- readWorksheet(wb, sheet = "odds", header = TRUE) %>%
+  mutate(date = as.Date(date))
+
+data <- data %>% left_join(odds, by = c("date" = "date", "target_team" = "home_team")) %>%
+  mutate(favourite = as.factor(ifelse(home_odds < away_odds, "favourite", "underdog")))
+
+```
+
+
+**1. Home team advantage: Does the home team really win more often?**
+
+Over the last six NHL seasons, there appears to be some truth to the home ground advantage theory. The home team won more than half the time in each of the last six seasons. However, this was only a slight advantage as the highest proportion of home wins overall for a season was just 56.3% in 2017/2018 when there were 716 wins by home teams compared to 555 losses.
+
+```{r}
+
+season_summary <- data %>%
+  group_by(season.x, target_outcome.x) %>%
+  summarise(number = n()) %>%
+  spread(target_outcome.x, number) %>%
+  mutate(prop_win = Win/sum(Loss, Win))
+
+
+home_advantage <- ggplot(season_summary, aes(season.x, prop_win, fill = "")) +
+  geom_bar(stat = "identity", fill = "white", col = "dark blue") +
+  labs(title = "Home Ground Advantage",
+       x = "Season",
+       y = "Proportion of Wins") +
+  geom_text(aes(y = prop_win, label = paste(round(prop_win * 100, 1), "%", sep = "")),
+            vjust = 0.5, hjust = 1.2, 
+            color = "black", size = 3.5) +
+  theme_classic() + 
+  geom_hline(yintercept = 0.5, linetype = "dashed", col = "red") +
+  scale_y_continuous(breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6), labels = percent) +
+  coord_flip()
+
+home_advantage
+
+
+```
+
+
+**Rank difference: Does a higher ranked team usually beat a lower ranked team?**
+
+A look at the rank difference of winners and losers over the past six seasons shows that there is also some truth to this theory as well. However, much like the home ground advantage, the apparent strength of this rank advantage does not appear overly significant. While, winners overall had a higher average rank in each of the last six seasons, the highest average rank difference was just 2 when there are up to 31 teams depending on the season.
+
+```{r}
+season_summary_2 <- data %>%
+  filter(!is.na(rankDifference)) %>%
+  group_by(season.x, target_outcome.x) %>%
+  summarise(number = n(), avg_rank_diff = mean(rankDifference)) %>%
+  spread(target_outcome.x, number) %>%
+  mutate(Loss_Win = ifelse(is.na(Loss), "Win", "Loss")) %>%
+  select(1:2, 5) %>%
+  spread(Loss_Win, avg_rank_diff)
+
+rank_dif <- ggplot(season_summary_2, aes(season.x, Loss, fill = "")) +
+  geom_bar(stat = "identity", fill = "red", col = "black", alpha = 0.8) +
+  geom_bar(stat = "identity", aes(season.x, Win), fill = "darkblue", col = "black", alpha = 0.8) +
+  labs(title = "Winner and Loser Ranks",
+       y = "Average Rank Difference",
+       x = "Season") +
+  geom_text(aes(y = Loss, label = round(Loss, 2)),
+            vjust = -0.5, hjust = 0.5, 
+            color = "white", size = 3.5) +
+  geom_text(aes(y = Win, label = round(Win, 2)),
+            vjust = 1, hjust = 0.5, 
+            color = "white", size = 3.5) +
+  annotate(geom = "text", x = "2014/2015", y = -2.2, label = "Losers",
+           color="red") +
+  annotate(geom = "text", x = "2014/2015", y = 2.2, label = "Winners",
+           color="darkblue") +
+  theme_classic()
+
+rank_dif
+
+
+```
+
+
+Looking at this from a different perspective, I have looked at just games where the target team won. While the average rank difference is positive above, the proportion of games where the winner was ranked higher hovers both above and below 50%. Considering the positive average rank difference highlighted above, this indicates that wins are more likely to occur for the high ranked team when the difference in rank is greater.
+
+```{r}
+
+win_rank_difference <- data %>% 
+  filter(target_outcome.x == "Win", rankDifference > 0) %>%
+  group_by(season.x) %>%
+  summarise(number = n())
+
+total_win_games <- data %>%
+  filter(target_outcome.x == "Win") %>%
+  group_by(season.x) %>%
+  summarise(number = n())
+
+win_rank_difference <- win_rank_difference %>%
+  left_join(total_win_games, by = c("season.x" = "season.x")) %>%
+  mutate(win_prop = number.x/number.y)
+
+rank_difference <- ggplot(win_rank_difference, aes(season.x, win_prop, fill = "")) +
+  geom_bar(stat = "identity", fill = "white", col = "dark blue") +
+  labs(title = "Higher Rank Wins?",
+       x = "Season",
+       y = "Proportion of Wins") +
+  geom_text(aes(y = win_prop, label = paste(round(win_prop * 100, 1), "%", sep = "")),
+            vjust = 0.5, hjust = 1.2, 
+            color = "black", size = 3.5) +
+  theme_classic() + 
+  geom_hline(yintercept = 0.5, linetype = "dashed", col = "red") +
+  scale_y_continuous(breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6), labels = percent) +
+  coord_flip()
+
+rank_difference
+
+```
+
+
+**Favourite: Does the favourite usually win?**
+
+Taking the target team and splitting their games into two categories based on whether they were the favourite or the underdog for the match once again shows some support for the theory. When the favourite, the target team won more than 55% of the time. This dropped to around 44% when they were the underdog. Odds were only gathered for the 2018/2019 and 2019/2020 season.
+
+```{r}
+
+season_summary_3 <- data %>%
+  filter(!is.na(favourite)) %>%
+  group_by(season.x, target_outcome.x, favourite) %>%
+  summarise(number = n()) %>%
+  spread(target_outcome.x, number) %>%
+  mutate(total_games = Loss + Win) %>%
+  mutate(prop_win = Win/total_games) %>%
+  select(1:2, 6) 
+
+
+
+favourite <- ggplot(season_summary_3, aes(season.x, prop_win, fill = favourite)) +
+                geom_bar(stat = "identity", position = position_dodge()) +
+                labs(title = "Target Team Favourite and Underdog Game Outcomes",
+                  y = "Win Proportion",
+                  x = "Season") +
+  annotate(geom = "text", x = "2018/2019", y = 0.35, label = "58%                     43%",
+           color="black") +
+  annotate(geom = "text", x = "2019/2020", y = 0.35, label = "56%                     44%",
+           color="black") +
+  scale_fill_brewer(palette = "Paired") +
+  geom_hline(yintercept = 0.5, linetype = "dashed", col = "red") +
+  scale_y_continuous(breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6), labels = percent) +
+  theme_classic()
+
+  
+favourite    
+```
+
+
+**Hot streak: Does a couple of consecutive wins usually lead to another? A look at three game hot streaks.**
+
+Looking at teams that had achieved a three game hot streak over the last six seasons reveals that a little more than half went on to win their next game.  2017/2018 has the highest rate of teams winning their fourth game in a hot streak at 58.8%. This indicates some support for the theory that a team on a hot streak is likely to keep winning. However, the support is not overwhelming much like the other three theories. Furthermore, it is not that often that a team gets to a three game streak.
+
+```{r}
+
+ data_summary_6 <- data %>%
+  arrange(target_team, date) %>%
+  select(c("season.x", "target_outcome.x", "V17.x")) %>%
+  filter(V17.x == 6) %>% # streak is offset. a score of 6 means three wins in last 3 games. 
+  group_by(season.x, target_outcome.x) %>%
+  summarise(number = n()) %>%
+  spread(target_outcome.x, number) %>%
+  mutate(total_games = Loss + Win) %>%
+  mutate(prop_win = Win/total_games)
+
+three_game_streak <- ggplot(data_summary_6, aes(season.x, prop_win, fill = "")) +
+  geom_bar(stat = "identity", fill = "white", col = "dark blue") +
+  labs(title = "Winning the 4th Game After a 3 Game Hot Streak...",
+       x = "Season",
+       y = "Proportion of Wins") +
+  geom_text(aes(y = prop_win, label = paste(round(prop_win * 100, 1), "%", sep = "")),
+            vjust = 0.5, hjust = 1.2, 
+            color = "black", size = 3.5) +
+  theme_classic() + 
+  geom_hline(yintercept = 0.5, linetype = "dashed", col = "red") +
+  scale_y_continuous(breaks = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6), labels = percent) +
+  coord_flip()
+
+three_game_streak
+
+
+```
+
